@@ -1,0 +1,55 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:17-alpine
+    ports:
+      - "5435:5432"
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=recipe
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=docker
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    networks:
+      - my-network
+
+  web:
+    build:
+      context: .
+      dockerfile: web_postgres.Dockerfile
+    command: >
+      sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8005"
+    volumes:
+      - .:/code
+    ports:
+      - "8005:8005"
+    environment:
+      - POSTGRES_HOST=db
+      - POSTGRES_DB=recipe
+      - POSTGRES_USER=docker
+      - POSTGRES_PASSWORD=docker
+    depends_on:
+      - db
+    networks:
+      - my-network
+
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx.Dockerfile
+    ports:
+      - "9999:80"
+    depends_on:
+      - web
+    networks:
+      - my-network
+
+
+volumes:
+  postgres_data:
+
+networks:
+  my-network:
+    driver: bridge
